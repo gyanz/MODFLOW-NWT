@@ -14358,7 +14358,7 @@ C     + + + CODE + + +
         IF ( It.EQ.0 ) THEN
           T1 = SECNDS(0.0)
         ELSE
-          dt = SECNDS(T1)
+          dt = SECNDS(REAL(T1))
           Ts = Ts + dt
         END IF
 C---------RETURN
@@ -14513,7 +14513,6 @@ C---------RETURN
       END SUBROUTINE SSWR_MFQAQ
       
       DOUBLEPRECISION FUNCTION SSWR_KELLEY_PERTB(V) RESULT(value)
-        USE, INTRINSIC :: IEEE_ARITHMETIC
         USE GWFSWRMODULE, ONLY: DZERO, DONE
         IMPLICIT NONE
 C       + + + DUMMY ARGUMENTS + + +
@@ -14529,7 +14528,7 @@ C       + + + CODE + + +
         value = DZERO
         e     = SQRT( EPSILON(DZERO) )
         av    = ABS( V )
-        IF ( IEEE_IS_NAN(av) ) av = DONE
+        IF ( ISNAN(av) ) av = DONE
 C        sgn   = DONE
 C        IF ( ABS(V).GT.DZERO ) sgn = V / ABS( V )
 C        value = MAX( e * ABS( V ) , e ) * sgn
