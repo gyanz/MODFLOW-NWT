@@ -243,7 +243,8 @@ NWT1_solver.o : NWT1_xmd.o NWT1_gmres.o
 NWT1_xmd.o : NWT1_xmdlib.o
 
 # machine_constants.mod from mach_mod.f90
-modules.o NWT1_gmres.o NWT1_ilupc_mod.o NWT1_solver.o : mach_mod.o
+modules.o NWT1_gmres.o NWT1_ilupc_mod.o NWT1_solver.o NWT1_module.o : \
+    mach_mod.o
 
 # ilupc_mod.mod from NWT1_ilupc_mod.f90
 modules.o NWT1_solver.o : NWT1_ilupc_mod.o
