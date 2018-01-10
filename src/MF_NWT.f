@@ -356,7 +356,9 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
             
             IF (KKITER.EQ.1) THEN
             !Compute SWR once based on previous MODFLOW step head
-                  IF(IUNIT(64).GT.0) CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)  !SWR - JDH
+                  IF(IUNIT(64).GT.0) THEN
+                        CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)  !SWR - JDH
+                  END IF
             END IF !IF clause by GYANZ
             
 !            IF(IUNIT(66).GT.0) CALL GWF2GFB7FM(IGRID)
