@@ -353,13 +353,18 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
             IF(IUNIT(54).GT.0) CALL GWF2SUB7FM(KKPER,KKITER,
      1                                         IUNIT(9),IGRID)
             IF(IUNIT(57).GT.0) CALL GWF2SWT7FM(KKPER,IGRID)
-            
-            IF (KKITER.EQ.1) THEN
+
+            IF(IUNIT(64).GT.0) THEN
+#           ifdef SWR_OUTER_1
             !Compute SWR once based on previous MODFLOW step head
-                  IF(IUNIT(64).GT.0) THEN
-                        CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)  !SWR - JDH
-                  END IF
-            END IF !IF clause by GYANZ
+            !Macro Ifdef added by GYANZ
+                IF (KKITER.EQ.1) THEN           
+                    CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)
+                END IF
+#           else
+                CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)  !SWR - JDH
+#           endif
+            END IF
             
 !            IF(IUNIT(66).GT.0) CALL GWF2GFB7FM(IGRID)
 C-------------SWI2 FORMULATE (GWF2SWI2FM) NEEDS TO BE THE LAST PACKAGE
