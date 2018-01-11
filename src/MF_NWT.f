@@ -6,6 +6,10 @@ C     ******************************************************************
 C
 C        SPECIFICATIONS:
 C     ------------------------------------------------------------------
+!GYANZ SWR_OUTER_1: Macro when defined computes SWR only at the first
+!GYANZ              MODFLOW outer iteration. 
+!GYANZ              Example usage in pymake: fflags = 'fpp DSWR_OUTER_1'
+C     ------------------------------------------------------------------
 C1------USE package modules.
       USE GLOBAL
       USE GWFBASMODULE
