@@ -6,9 +6,10 @@ C     ******************************************************************
 C
 C        SPECIFICATIONS:
 C     ------------------------------------------------------------------
-!GYANZ SWR_OUTER_1: Macro when defined computes SWR only at the first
-!GYANZ              MODFLOW outer iteration. 
-!GYANZ              Example usage in pymake: fflags = 'fpp DSWR_OUTER_1'
+!     GYANZ 01/12/2018
+!     SWR_OUTER_1: Macro when defined computes SWR only at the first
+!                  MODFLOW outer iteration. 
+!                  Example usage in pymake: fflags = 'fpp DSWR_OUTER_1'
 C     ------------------------------------------------------------------
 C1------USE package modules.
       USE GLOBAL
@@ -361,7 +362,7 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
             IF(IUNIT(64).GT.0) THEN
 #           ifdef SWR_OUTER_1
             !Compute SWR once based on previous MODFLOW step head
-            !Macro Ifdef added by GYANZ
+            !Macro Ifdef added by GYANZ 01/12/2018
                 IF (KKITER.EQ.1) THEN           
                     CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)
                 END IF
@@ -423,13 +424,25 @@ C7C2B---MAKE ONE CUT AT AN APPROXIMATE SOLUTION.
      2                          IUNIT(22),IGRID)
           IF ( IUNIT(63).GT.0 )ITREAL2 = ITREAL
 C
-C-------ENSURE CONVERGENCE OF SWR - BASEFLOW CHANGES LESS THAN TOLF - JDH
+
+#         ifndef SWR_OUTER_1
+          !Macro Ifndef added by GYANZ
+C-----------ENSURE CONVERGENCE OF SWR - BASEFLOW CHANGES LESS THAN TOLF - JDH
             IF(IUNIT(64).GT.0) THEN
               CALL GWF2SWR7CV(KKITER,IGRID,ICNVG,MXITER)
-              ! GWF2SWR7CV ensures that ICNVG is zero when 
-              ! KKITER (MODFLOW OUTER ITERATION) = 1
-              ! GYANZ
+              !GWF2SWR7CV modifies ICNVG value that was set by Newton Solver
+              !Would not this cause problem?
+              !GYANZ 01/12/2018
             END IF
+#          else
+           !No need to check base flow convergence as SWR computation occurs
+           !once irrespective of KKITER
+             IF (KKITER == 1) ICNVG = 0
+             ! Similar to GWF2SWR7CV ensures that ICNVG is zero
+             ! when KKITER (MODFLOW OUTER ITERATION) = 1
+             ! GYANZ 01/12/2018
+#          endif
+
 C
 C7C2C---IF CONVERGENCE CRITERION HAS BEEN MET STOP ITERATING.
             IF (ICNVG.EQ.1) GOTO 33
