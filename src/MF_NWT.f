@@ -437,7 +437,7 @@ C-----------ENSURE CONVERGENCE OF SWR - BASEFLOW CHANGES LESS THAN TOLF - JDH
 #          else
            !No need to check base flow convergence as SWR computation occurs
            !once irrespective of KKITER
-             IF (KKITER == 1) ICNVG = 0
+             IF (KKITER.EQ.1) ICNVG = 0
              ! Similar to GWF2SWR7CV ensures that ICNVG is zero
              ! when KKITER (MODFLOW OUTER ITERATION) = 1
              ! GYANZ 01/12/2018
