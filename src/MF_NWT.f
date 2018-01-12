@@ -10,6 +10,7 @@ C     ------------------------------------------------------------------
 !     SWR_OUTER_1: Macro when defined computes SWR only at the first
 !                  MODFLOW outer iteration. 
 !                  Example usage in pymake: fflags = 'fpp DSWR_OUTER_1'
+!     RIP_ET: Macro when defined includes RIP ET Package
 C     ------------------------------------------------------------------
 C1------USE package modules.
       USE GLOBAL
@@ -40,7 +41,7 @@ C
       INTEGER IBDT(8)
 C
       CHARACTER*4 CUNIT(NIUNIT)
-      DATA CUNIT/'BCF6', 'WEL ', 'DRN ', 'RIV ', 'EVT ', 'gfd ', 'GHB ',  !  7
+      DATA CUNIT/'BCF6', 'WEL ', 'DRN ', 'RIV ', 'EVT ', 'RIP ', 'GHB ',  !  7
      &           'RCH ', 'SIP ', 'DE4 ', '    ', 'OC  ', 'PCG ', 'lmg ',  ! 14
      &           'gwt ', 'FHB ', 'RES ', 'STR ', 'IBS ', 'CHD ', 'HFB6',  ! 21
      &           'LAK ', 'LPF ', 'DIS ', '    ', 'PVAL', '    ', 'HOB ',  ! 28
@@ -106,6 +107,10 @@ C6------ALLOCATE AND READ (AR) PROCEDURE
       IF(IUNIT(3).GT.0) CALL GWF2DRN7AR(IUNIT(3),IGRID)
       IF(IUNIT(4).GT.0) CALL GWF2RIV7AR(IUNIT(4),IGRID)
       IF(IUNIT(5).GT.0) CALL GWF2EVT7AR(IUNIT(5),IGRID)
+#     ifdef RIP_ET
+      !GYANZ 01/12/2018
+          IF(IUNIT(6).GT.0) CALL GWF2RIP4AR(IUNIT(6),IGRID)               !inserted by jdh    
+#     endif
       IF(IUNIT(7).GT.0) CALL GWF2GHB7AR(IUNIT(7),IGRID)
       IF(IUNIT(8).GT.0) CALL GWF2RCH7AR(IUNIT(8),IGRID)
       IF(IUNIT(16).GT.0) CALL GWF2FHB7AR(IUNIT(16),IGRID)
@@ -193,6 +198,10 @@ C----------READ USING PACKAGE READ AND PREPARE MODULES.
         IF(IUNIT(3).GT.0) CALL GWF2DRN7RP(IUNIT(3),IGRID)
         IF(IUNIT(4).GT.0) CALL GWF2RIV7RP(IUNIT(4),IGRID)
         IF(IUNIT(5).GT.0) CALL GWF2EVT7RP(IUNIT(5),IGRID)
+#       ifdef RIP_ET
+        !GYANZ 01/12/2018
+            IF(IUNIT(6).GT.0) CALL GWF2RIP4RP(IUNIT(6),IGRID)    !inserted by jdh
+#       endif
         IF(IUNIT(7).GT.0) CALL GWF2GHB7RP(IUNIT(7),IGRID)
 !        IF(IUNIT(8).GT.0) CALL GWF2RCH7RP(IUNIT(8),IUNIT(44),IGRID)
         IF(IUNIT(8).GT.0) CALL GWF2RCH7RP(IUNIT(8),IGRID)
@@ -316,6 +325,12 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
               IF(IUNIT(22).GT.0.AND.NEVTOP.EQ.3) CALL GWF2LAK7ST(
      1                                                    1,IGRID)
             END IF
+            
+#           ifdef RIP_ET
+            !GYANZ 01/12/2018
+                IF(IUNIT(6).GT.0) CALL GWF2RIP4FM(IGRID)                !inserted by jdh
+#           endif
+ 
             IF(IUNIT(7).GT.0) CALL GWF2GHB7FM(IGRID)
             IF(IUNIT(8).GT.0) THEN
                IF(IUNIT(22).GT.0.AND.NRCHOP.EQ.3) CALL GWF2LAK7ST(
@@ -529,6 +544,12 @@ C7C4----CALCULATE BUDGET TERMS. SAVE CELL-BY-CELL FLOW TERMS.
              IF(IUNIT(22).GT.0.AND.NEVTOP.EQ.3) CALL GWF2LAK7ST(
      1                                                     1,IGRID)
           END IF
+          
+#         ifdef RIP_ET
+          !GYANZ 01/12/2018
+              IF(IUNIT(6).GT.0) CALL GWF2RIP4BD(KKSTP,KKPER,IGRID)        !inserted by jdh
+#         endif
+          
           IF(IUNIT(7).GT.0) CALL GWF2GHB7BD(KKSTP,KKPER,IGRID)
           IF(IUNIT(8).GT.0) THEN
              IF(IUNIT(22).GT.0.AND.NRCHOP.EQ.3) CALL GWF2LAK7ST(
@@ -662,6 +683,10 @@ C9------LAST BECAUSE IT DEALLOCATES IUNIT.
       IF(IUNIT(3).GT.0) CALL GWF2DRN7DA(IGRID)
       IF(IUNIT(4).GT.0) CALL GWF2RIV7DA(IGRID)
       IF(IUNIT(5).GT.0) CALL GWF2EVT7DA(IGRID)
+#     ifdef RIP_ET
+      !GYANZ 01/12/2018
+      IF(IUNIT(6).GT.0) CALL GWF2RIP4DA(IGRID)                        !inserted by jdh
+#     endif
       IF(IUNIT(7).GT.0) CALL GWF2GHB7DA(IGRID)
       IF(IUNIT(8).GT.0) CALL GWF2RCH7DA(IGRID)
       IF(IUNIT(9).GT.0) CALL SIP7DA(IGRID)
