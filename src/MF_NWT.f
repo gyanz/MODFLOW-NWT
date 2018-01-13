@@ -61,6 +61,11 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
      &' GROUNDWATER-FLOW MODEL',/,29X,'WITH NEWTON FORMULATION',
      &  /,29X,'Version ',A/,20X,'BASED ON MODFLOW-2005 Version ',A/,
      &  /,20X,'SWR1 Version ',A/)
+     
+#ifdef __INTEL_COMPILER
+      write  (*, *)  "Fortran code compiled with ifort, verion:", __INTEL_COMPILER
+#endif     
+     
       INUNIT = 99
       NCVGERR=0
 C
