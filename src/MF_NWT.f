@@ -6,6 +6,12 @@ C     ******************************************************************
 C
 C        SPECIFICATIONS:
 C     ------------------------------------------------------------------
+!     GYANZ 01/12/2018
+!     SWR_OUTER_1: Macro when defined computes SWR only at the first
+!                  MODFLOW outer iteration. 
+!                  Example usage in pymake: fflags = 'fpp DSWR_OUTER_1'
+!     RIP_ET: Macro when defined includes RIP ET Package
+C     ------------------------------------------------------------------
 C1------USE package modules.
       USE GLOBAL
       USE GWFBASMODULE
@@ -35,7 +41,7 @@ C
       INTEGER IBDT(8)
 C
       CHARACTER*4 CUNIT(NIUNIT)
-      DATA CUNIT/'BCF6', 'WEL ', 'DRN ', 'RIV ', 'EVT ', 'gfd ', 'GHB ',  !  7
+      DATA CUNIT/'BCF6', 'WEL ', 'DRN ', 'RIV ', 'EVT ', 'RIP ', 'GHB ',  !  7
      &           'RCH ', 'SIP ', 'DE4 ', '    ', 'OC  ', 'PCG ', 'lmg ',  ! 14
      &           'gwt ', 'FHB ', 'RES ', 'STR ', 'IBS ', 'CHD ', 'HFB6',  ! 21
      &           'LAK ', 'LPF ', 'DIS ', '    ', 'PVAL', '    ', 'HOB ',  ! 28
@@ -55,6 +61,15 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
      &' GROUNDWATER-FLOW MODEL',/,29X,'WITH NEWTON FORMULATION',
      &  /,29X,'Version ',A/,20X,'BASED ON MODFLOW-2005 Version ',A/,
      &  /,20X,'SWR1 Version ',A/)
+     
+#ifdef __INTEL_COMPILER
+      write  (*, *)  "Fortran code compiled with ifort, verion:", __INTEL_COMPILER
+#endif
+
+#ifdef __GFORTRAN__
+      write  (*, *)  "Fortran code compiled with gfortran, verion:", __VERSION__
+#endif   
+     
       INUNIT = 99
       NCVGERR=0
 C
@@ -101,6 +116,10 @@ C6------ALLOCATE AND READ (AR) PROCEDURE
       IF(IUNIT(3).GT.0) CALL GWF2DRN7AR(IUNIT(3),IGRID)
       IF(IUNIT(4).GT.0) CALL GWF2RIV7AR(IUNIT(4),IGRID)
       IF(IUNIT(5).GT.0) CALL GWF2EVT7AR(IUNIT(5),IGRID)
+#     ifdef RIP_ET
+      !GYANZ 01/12/2018
+          IF(IUNIT(6).GT.0) CALL GWF2RIP4AR(IUNIT(6),IGRID)               !inserted by jdh    
+#     endif
       IF(IUNIT(7).GT.0) CALL GWF2GHB7AR(IUNIT(7),IGRID)
       IF(IUNIT(8).GT.0) CALL GWF2RCH7AR(IUNIT(8),IGRID)
       IF(IUNIT(16).GT.0) CALL GWF2FHB7AR(IUNIT(16),IGRID)
@@ -188,6 +207,10 @@ C----------READ USING PACKAGE READ AND PREPARE MODULES.
         IF(IUNIT(3).GT.0) CALL GWF2DRN7RP(IUNIT(3),IGRID)
         IF(IUNIT(4).GT.0) CALL GWF2RIV7RP(IUNIT(4),IGRID)
         IF(IUNIT(5).GT.0) CALL GWF2EVT7RP(IUNIT(5),IGRID)
+#       ifdef RIP_ET
+        !GYANZ 01/12/2018
+            IF(IUNIT(6).GT.0) CALL GWF2RIP4RP(IUNIT(6),IGRID)    !inserted by jdh
+#       endif
         IF(IUNIT(7).GT.0) CALL GWF2GHB7RP(IUNIT(7),IGRID)
 !        IF(IUNIT(8).GT.0) CALL GWF2RCH7RP(IUNIT(8),IUNIT(44),IGRID)
         IF(IUNIT(8).GT.0) CALL GWF2RCH7RP(IUNIT(8),IGRID)
@@ -311,6 +334,12 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
               IF(IUNIT(22).GT.0.AND.NEVTOP.EQ.3) CALL GWF2LAK7ST(
      1                                                    1,IGRID)
             END IF
+            
+#           ifdef RIP_ET
+            !GYANZ 01/12/2018
+                IF(IUNIT(6).GT.0) CALL GWF2RIP4FM(IGRID)                !inserted by jdh
+#           endif
+ 
             IF(IUNIT(7).GT.0) CALL GWF2GHB7FM(IGRID)
             IF(IUNIT(8).GT.0) THEN
                IF(IUNIT(22).GT.0.AND.NRCHOP.EQ.3) CALL GWF2LAK7ST(
@@ -353,7 +382,19 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
             IF(IUNIT(54).GT.0) CALL GWF2SUB7FM(KKPER,KKITER,
      1                                         IUNIT(9),IGRID)
             IF(IUNIT(57).GT.0) CALL GWF2SWT7FM(KKPER,IGRID)
-            IF(IUNIT(64).GT.0) CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)  !SWR - JDH
+
+            IF(IUNIT(64).GT.0) THEN
+#           ifdef SWR_OUTER_1
+            !Compute SWR once based on previous MODFLOW step head
+            !Macro Ifdef added by GYANZ 01/12/2018
+                IF (KKITER.EQ.1) THEN           
+                    CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)
+                END IF
+#           else
+                CALL GWF2SWR7FM(KKITER,KKPER,KKSTP,IGRID)  !SWR - JDH
+#           endif
+            END IF
+            
 !            IF(IUNIT(66).GT.0) CALL GWF2GFB7FM(IGRID)
 C-------------SWI2 FORMULATE (GWF2SWI2FM) NEEDS TO BE THE LAST PACKAGE
 C             ENTRY SINCE SWI2 SAVES THE RHS (RHSFRESH) PRIOR TO ADDING SWI TERMS
@@ -407,10 +448,25 @@ C7C2B---MAKE ONE CUT AT AN APPROXIMATE SOLUTION.
      2                          IUNIT(22),IGRID)
           IF ( IUNIT(63).GT.0 )ITREAL2 = ITREAL
 C
-C-------ENSURE CONVERGENCE OF SWR - BASEFLOW CHANGES LESS THAN TOLF - JDH
+
+#         ifndef SWR_OUTER_1
+          !Macro Ifndef added by GYANZ
+C-----------ENSURE CONVERGENCE OF SWR - BASEFLOW CHANGES LESS THAN TOLF - JDH
             IF(IUNIT(64).GT.0) THEN
               CALL GWF2SWR7CV(KKITER,IGRID,ICNVG,MXITER)
+              !GWF2SWR7CV modifies ICNVG value that was set by Newton Solver
+              !Would not this cause problem?
+              !GYANZ 01/12/2018
             END IF
+#          else
+           !No need to check base flow convergence as SWR computation occurs
+           !once irrespective of KKITER
+             IF (KKITER.EQ.1) ICNVG = 0
+             ! Similar to GWF2SWR7CV ensures that ICNVG is zero
+             ! when KKITER (MODFLOW OUTER ITERATION) = 1
+             ! GYANZ 01/12/2018
+#          endif
+
 C
 C7C2C---IF CONVERGENCE CRITERION HAS BEEN MET STOP ITERATING.
             IF (ICNVG.EQ.1) GOTO 33
@@ -497,6 +553,12 @@ C7C4----CALCULATE BUDGET TERMS. SAVE CELL-BY-CELL FLOW TERMS.
              IF(IUNIT(22).GT.0.AND.NEVTOP.EQ.3) CALL GWF2LAK7ST(
      1                                                     1,IGRID)
           END IF
+          
+#         ifdef RIP_ET
+          !GYANZ 01/12/2018
+              IF(IUNIT(6).GT.0) CALL GWF2RIP4BD(KKSTP,KKPER,IGRID)        !inserted by jdh
+#         endif
+          
           IF(IUNIT(7).GT.0) CALL GWF2GHB7BD(KKSTP,KKPER,IGRID)
           IF(IUNIT(8).GT.0) THEN
              IF(IUNIT(22).GT.0.AND.NRCHOP.EQ.3) CALL GWF2LAK7ST(
@@ -630,6 +692,10 @@ C9------LAST BECAUSE IT DEALLOCATES IUNIT.
       IF(IUNIT(3).GT.0) CALL GWF2DRN7DA(IGRID)
       IF(IUNIT(4).GT.0) CALL GWF2RIV7DA(IGRID)
       IF(IUNIT(5).GT.0) CALL GWF2EVT7DA(IGRID)
+#     ifdef RIP_ET
+      !GYANZ 01/12/2018
+      IF(IUNIT(6).GT.0) CALL GWF2RIP4DA(IGRID)                        !inserted by jdh
+#     endif
       IF(IUNIT(7).GT.0) CALL GWF2GHB7DA(IGRID)
       IF(IUNIT(8).GT.0) CALL GWF2RCH7DA(IGRID)
       IF(IUNIT(9).GT.0) CALL SIP7DA(IGRID)
