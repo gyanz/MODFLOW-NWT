@@ -64,7 +64,11 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
      
 #ifdef __INTEL_COMPILER
       write  (*, *)  "Fortran code compiled with ifort, verion:", __INTEL_COMPILER
-#endif     
+#endif
+
+#ifdef __GFORTRAN__
+      write  (*, *)  "Fortran code compiled with gfortran, verion:", __GFORTRAN__
+#endif   
      
       INUNIT = 99
       NCVGERR=0
