@@ -67,7 +67,7 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
 #endif
 
 #ifdef __GFORTRAN__
-      write  (*, *)  "Fortran code compiled with gfortran, verion:", __GFORTRAN__
+      write  (*, *)  "Fortran code compiled with gfortran, verion:", __VERSION__
 #endif   
      
       INUNIT = 99
