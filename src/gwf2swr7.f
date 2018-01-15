@@ -11287,12 +11287,21 @@ C     + + + FUNCTIONS + + +
         !DOUBLEPRECISION :: SSWR_CALC_DPTHFACT
 C     + + + CODE + + +
         value = DZERO
+
+        REACH(Irch)%CURRENT%QPOTGWET = DZERO   !GYANZ 01/15/2018
+
+        REACH(Irch)%CURRENT%EVAP = DZERO
+
+        !GYANZ 01/15/2018
+        !Changed the order of lines so that QPOTGWET is zero for inactive reach,
+        !and reach with zero evaporation rate
+
 C         DO NOT EVALUATE INACTIVE REACHES
         IF ( REACH(Irch)%ISWRBND.EQ.0 ) GOTO 9999
 C
         swe    = REACH(Irch)%EVAP
         e      = swe
-        REACH(Irch)%CURRENT%EVAP = DZERO
+
 C         DO NOT EVALUATE REACHES WITH ZERO EVAPORATION RATES
         IF ( e.LT.NEARZERO ) GOTO 9999
         rbot   = REACH(Irch)%GEO%ELEV(1)
