@@ -5109,6 +5109,9 @@ C-------SWRSUBTIME END
 
 #     ifdef SWR_OUTER_1
       !For SWR_OUTER_1 macro  
+      ELSE
+      write(*,*)'Using prior SWR stage on MF outer iter:', kkiter
+      write(IOUT,*)'Using prior SWR stage on MF outer iter:', kkiter
       END IF
 #     endif
 
