@@ -11275,6 +11275,13 @@ C---------RETURN
         USE GWFSWRMODULE, ONLY: DZERO, NEARZERO, REACH,
      2                          DMINDPTH, DUPDPTH
         USE GWFSWRINTERFACE, ONLY: SSWR_LININT, SSWR_CALC_DPTHFACT
+#       ifdef RIP_ET
+        !GYANZ 01/15/2018
+        !If RIP ET was compiled, perform a check whether this package i.e.
+        !IUNIT(6) is active. If active, SWR will not compute aquifer evapotrans
+        !piration as described in A40 manual page 34. 
+            USE GLOBAL, ONLY: IUNIT
+#       endif
         IMPLICIT NONE
 C     + + + DUMMY ARGUMENTS + + +
         INTEGER, INTENT(IN)         :: Irch
@@ -11287,12 +11294,21 @@ C     + + + FUNCTIONS + + +
         !DOUBLEPRECISION :: SSWR_CALC_DPTHFACT
 C     + + + CODE + + +
         value = DZERO
+
+        REACH(Irch)%CURRENT%QPOTGWET = DZERO   !GYANZ 01/15/2018
+
+        REACH(Irch)%CURRENT%EVAP = DZERO
+
+        !GYANZ 01/15/2018
+        !Changed the order of lines so that QPOTGWET is zero for inactive reach,
+        !and reach with zero evaporation rate
+
 C         DO NOT EVALUATE INACTIVE REACHES
         IF ( REACH(Irch)%ISWRBND.EQ.0 ) GOTO 9999
 C
         swe    = REACH(Irch)%EVAP
         e      = swe
-        REACH(Irch)%CURRENT%EVAP = DZERO
+
 C         DO NOT EVALUATE REACHES WITH ZERO EVAPORATION RATES
         IF ( e.LT.NEARZERO ) GOTO 9999
         rbot   = REACH(Irch)%GEO%ELEV(1)
@@ -11310,7 +11326,23 @@ C---------SURFACE AREA
         swe = -sa * swe
 C---------REACH DATA FOR SWR TIMESTEP          
         REACH(Irch)%CURRENT%EVAP     = e
-        REACH(Irch)%CURRENT%QPOTGWET = MIN( DZERO, swe - e )
+
+#       ifdef RIP_ET
+        !GYANZ
+        !RIP ET package available 
+        IF (IUNIT(6).EQ.0) THEN
+        !RIP ET package not used, normal SWR Aquifer EVAP computation
+            REACH(Irch)%CURRENT%QPOTGWET = MIN( DZERO, swe - e )
+        !ELSE 
+        !   QPOTGWET = ZERO (already initialized as zero in the beginning)
+        ENDIF
+#       else
+        !RIP ET package NOT available 
+        !Normal SWR Aquifer EVAP computation
+        !As in A40 page 34
+            REACH(Irch)%CURRENT%QPOTGWET = MIN( DZERO, swe - e )
+#       endif
+
 C---------RATE
         value = e
 C---------RETURN
