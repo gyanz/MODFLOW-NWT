@@ -1359,6 +1359,14 @@ C           USE_IMPLICIT_NEWTON_CORRECTION
           IF ( swroptions(20)%ioptionused.NE.0 ) INWTCORR    =  1
 C           USE_EXPLICIT_NEWTON_CORRECTION
           IF ( swroptions(21)%ioptionused.NE.0 ) INWTCORR    = -1
+#         ifdef SWR_OUTER_1
+          !GYANZ 01/16/2018
+          !AVOID complication with SWR computation
+          IF (INWTCORR.NE.0) THEN
+             CALL USTOP('SWR1 ERROR: NWT CORR. NOT ALLOWED WITH'//
+     2                   'SWR_OUTER_1 MACRO DEFINED COMPILATION!')
+          ENDIF
+#         endif
 C           USE_ORIGINAL_2D_QM_FORMULATION
           IF ( swroptions(22)%ioptionused.NE.0 ) ICIQM       =  0
 C           USE_IMPLICIT_INVARIATE_QM
@@ -5137,7 +5145,17 @@ C-----------UPDATE CURRENTQAQ
           irg = REACH(i)%IRG
           rs  = RSTAGE(i,n)
           ISWRDT  = n
-          q = SSWR_CALC_QAQ(REACH(i),rs)
+
+#       ifdef SWR_OUTER_1
+        !GYANZ 01/16/2018
+        !Keep the acquifer exchange terms constant during Outer Iteration
+        ! kiter > 1
+        if (kkiter.EQ.1) THEN 
+            q = SSWR_CALC_QAQ(REACH(i),rs)
+        END IF
+#       else
+        q = SSWR_CALC_QAQ(REACH(i),rs)
+#       endif
           dtscale = SWRTIME(n)%SWRDT / REAL( DELT, 8 )
 C-----------CYCLE THROUGH EACH LAYER
           LAYERS: DO kl = REACH(i)%LAYSTR, REACH(i)%LAYEND
@@ -5148,7 +5166,18 @@ C-----------CYCLE THROUGH EACH LAYER
             end if
 C-------------CURRENT ESTIMATE OF GROUNDWATER HEAD
             h0   = REAL( HOLD(jc,ir,kact), 8 )
-            h1   = HNEW(jc,ir,kact)
+#           ifdef SWR_OUTER_1
+            !GYANZ 01/16/2018
+            !Do not change aquifer exchange values after first outer iteration
+            if (kkiter.EQ.1) THEN
+                h1   = HNEW(jc,ir,kact)
+            ELSE
+                h1 = h0
+            END IF
+#           else
+                h1   = HNEW(jc,ir,kact)
+#           endif
+
             h    = ( DONE - fdelt ) * h0 + fdelt * h1
 C-------------DEFAULT CONDITION IS ADDING TERMS TO HCOF+RHS 
             rhsonly = .FALSE.
@@ -5171,6 +5200,9 @@ C             QAQFLOW IS CALCULATED IN SSWR_RG_QAQ FUNCTION CALL
             END IF
           END DO LAYERS
 C
+          !GYANZ 01/16/2018
+          !SWR_OUTER_1 AVOIDS FOLLOWING NEWTON TERMS COMPUTATION
+
 C-------------CALCULATE EXPLICIT SWR1 NEWTON TERMS
             IF ( INWTCORR.LT.0 ) THEN
               irg = REACH(i)%IRG
