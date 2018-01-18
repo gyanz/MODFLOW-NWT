@@ -69,6 +69,11 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
 #ifdef __GFORTRAN__
       write  (*, *)  'Compiled with gfortran, verion:', __VERSION__
 #endif   
+
+#if defined RIP_ET && defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+#define GWF2RIP4FM(x) GWF2RIP4FM(x,kkper,kkstp,kkiter)
+#endif 
+
      
       INUNIT = 99
       NCVGERR=0
@@ -118,7 +123,21 @@ C6------ALLOCATE AND READ (AR) PROCEDURE
       IF(IUNIT(5).GT.0) CALL GWF2EVT7AR(IUNIT(5),IGRID)
 #     ifdef RIP_ET
       !GYANZ 01/12/2018
-          IF(IUNIT(6).GT.0) CALL GWF2RIP4AR(IUNIT(6),IGRID)               !inserted by jdh    
+          IF(IUNIT(6).GT.0) THEN
+              CALL GWF2RIP4AR(IUNIT(6),IGRID)               !inserted by jdh    
+#     if defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+              !Temporary solution to output RIP ET - REACH output to
+              !fid=166 as defined in the name file
+              INQUIRE(UNIT=166,OPENED=IRIP)
+              IF (IRIP) THEN
+                 write(166,2000)
+              END IF
+02000   FORMAT('      KPER',1X,'      KSTP',1X,'     KITER',1X,
+     &         '  REACH-NO','       ROW',1X,'       COL',1X,
+     &         '     LAYER',1X,'     DEPTH',1X,'   DPTH>MINDPTH')
+#      endif
+          END IF
+
 #     endif
       IF(IUNIT(7).GT.0) CALL GWF2GHB7AR(IUNIT(7),IGRID)
       IF(IUNIT(8).GT.0) CALL GWF2RCH7AR(IUNIT(8),IGRID)
