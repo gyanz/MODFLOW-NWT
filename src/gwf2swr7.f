@@ -473,7 +473,16 @@ C           RCHGRP TOTAL INFLOW AND OUTFLOW TERMS
           INTEGER :: ILOCFMAX
           DOUBLEPRECISION :: SWRTOT
           DOUBLEPRECISION :: SWRDT
+#       ifdef SWR_OUTER_1
+        !GYANZ 01/19/2018
+        !Give 100% weightage to HOLD when calculating Aquifer exchange value    
+          DOUBLEPRECISION :: FDELT = DZERO
+#       else
+        !Give 100% weightage to HNEW when calculating Aquifer exchange value    
+        !unless USE_WEIGHTED_HEAD is used
           DOUBLEPRECISION :: FDELT = DONE
+#       endif
+
           DOUBLEPRECISION :: FMAX
         END TYPE TSWRTIME
         TYPE TSTABILITY
@@ -1355,6 +1364,14 @@ C           USE_STAGE_TRANSFORM
           IF ( swroptions(18)%ioptionused.NE.0 ) ISOLSTG     =  1
 C           USE_WEIGHTED_HEADS
           IF ( swroptions(19)%ioptionused.NE.0 ) IWGTHDS     =  1
+#         ifdef SWR_OUTER_1
+          !GYANZ 01/19/2018
+          IF (IWGTHDS.EQ.1) THEN
+             CALL USTOP('SWR1 ERROR: HEAD WEIGHTAGE NOT ALLOWED WITH'//
+     2                   'SWR_OUTER_1 MACRO DEFINED COMPILATION!')
+
+          END IF
+#         endif
 C           USE_IMPLICIT_NEWTON_CORRECTION
           IF ( swroptions(20)%ioptionused.NE.0 ) INWTCORR    =  1
 C           USE_EXPLICIT_NEWTON_CORRECTION
@@ -4536,6 +4553,10 @@ C     *****************************************************************
      +                       ISSFLG, IBOUND, HNEW, HOLD, HCOF, RHS, 
      +                       DELR, DELC,
      +                       PERLEN, NSTP, TSMULT
+#     if defined RIP_ET && defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+     +                       , IUNIT 
+#     endif
+
       USE GWFBASMODULE, ONLY:DELT, TOTIM, HDRY
       USE GWFNWTMODULE, ONLY: A, IA, ICELL  !NEWTON
       IMPLICIT NONE
@@ -5166,18 +5187,12 @@ C-----------CYCLE THROUGH EACH LAYER
             end if
 C-------------CURRENT ESTIMATE OF GROUNDWATER HEAD
             h0   = REAL( HOLD(jc,ir,kact), 8 )
-#           ifdef SWR_OUTER_1
-            !GYANZ 01/16/2018
-            !Do not change aquifer exchange values after first outer iteration
-            if (kkiter.EQ.1) THEN
-                h1   = HNEW(jc,ir,kact)
-            ELSE
-                h1 = h0
-            END IF
-#           else
-                h1   = HNEW(jc,ir,kact)
-#           endif
+            h1   = HNEW(jc,ir,kact)
 
+            !GYANZ 01/19/2018
+            !fdelt is always zero with SWR_OUTER_1 macro
+            !so that aquifer is totally based on h0 which is the head at the
+            !beginning of MODFLOW time-step
             h    = ( DONE - fdelt ) * h0 + fdelt * h1
 C-------------DEFAULT CONDITION IS ADDING TERMS TO HCOF+RHS 
             rhsonly = .FALSE.
@@ -5257,6 +5272,11 @@ C             NEWTON CORRECTION OF A MATRIX FOR MODFLOW-NWT
       END IF
 C
 C-------CALCULATE GROUNDWATER EVAPOTRANSPIRATION
+#     if defined RIP_ET && defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+      !Do not compute evapotranspiration from model based reaches if RIP ET is
+      !active for this particular build  
+      IF (IUNIT(6).EQ.0) THEN  
+#     endif
       DO i = 1, NREACHES
         IF ( REACH(i)%IGEOTYPE.NE.5 ) CYCLE
         REACH(i)%GWETRATE = DZERO
@@ -5301,6 +5321,9 @@ C         LINEAR RELATION BETWEEN GROUNDWATER HEAD AND GROUNDWATER EVAPOTRANSPIR
 C         DO NOT SIMULATE GROUNDWATER EVAPOTRANSPIRATION IF
 C         GROUNDWATER LEVEL IS BELOW EXTINCTION DEPTH
       END DO
+#     if defined RIP_ET && defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+      END IF  
+#     endif
 C
 C-------SET ISWRCNVG
 00200 ISWRCNVG = 1
@@ -11321,13 +11344,6 @@ C---------RETURN
         USE GWFSWRMODULE, ONLY: DZERO, NEARZERO, REACH,
      2                          DMINDPTH, DUPDPTH
         USE GWFSWRINTERFACE, ONLY: SSWR_LININT, SSWR_CALC_DPTHFACT
-#       ifdef RIP_ET
-        !GYANZ 01/15/2018
-        !If RIP ET was compiled, perform a check whether this package i.e.
-        !IUNIT(6) is active. If active, SWR will not compute aquifer evapotrans
-        !piration as described in A40 manual page 34. 
-            USE GLOBAL, ONLY: IUNIT
-#       endif
         IMPLICIT NONE
 C     + + + DUMMY ARGUMENTS + + +
         INTEGER, INTENT(IN)         :: Irch
@@ -11373,21 +11389,7 @@ C---------SURFACE AREA
 C---------REACH DATA FOR SWR TIMESTEP          
         REACH(Irch)%CURRENT%EVAP     = e
 
-#       ifdef RIP_ET
-        !GYANZ
-        !RIP ET package available 
-        IF (IUNIT(6).EQ.0) THEN
-        !RIP ET package not used, normal SWR Aquifer EVAP computation
-            REACH(Irch)%CURRENT%QPOTGWET = MIN( DZERO, swe - e )
-        !ELSE 
-        !   QPOTGWET = ZERO (already initialized as zero in the beginning)
-        ENDIF
-#       else
-        !RIP ET package NOT available 
-        !Normal SWR Aquifer EVAP computation
-        !As in A40 page 34
-            REACH(Irch)%CURRENT%QPOTGWET = MIN( DZERO, swe - e )
-#       endif
+        REACH(Irch)%CURRENT%QPOTGWET = MIN( DZERO, swe - e )
 
 C---------RATE
         value = e

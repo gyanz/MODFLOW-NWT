@@ -6,11 +6,19 @@ C     ******************************************************************
 C
 C        SPECIFICATIONS:
 C     ------------------------------------------------------------------
-!     GYANZ 01/12/2018
+!     GYANZ 01/19/2018
 !     SWR_OUTER_1: Macro when defined computes SWR only at the first
 !                  MODFLOW outer iteration. 
 !                  Example usage in pymake: fflags = 'fpp DSWR_OUTER_1'
 !     RIP_ET: Macro when defined includes RIP ET Package
+!     SYNC_SWR_RIPET: Macro when defined along with SWR_OUTER_1 coordinates
+!                     RIP ET computation based on SWR Reach depth. If the reach
+!                     depth is greater than 10*DMINDPTH, RIP ET is not computed
+!                     for that reach or cell. This check occurs only after 2nd
+!                     MODFLOW outer iteration or kiter. Furthermore, FID = 166
+!                     is assigned to output file for some RIP ET/SWR results.
+!                     This output file may be inputted in NAME file
+!                     using DATA package.                  
 C     ------------------------------------------------------------------
 C1------USE package modules.
       USE GLOBAL
@@ -73,6 +81,18 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
 #if defined RIP_ET && defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
 #define GWF2RIP4FM(x) GWF2RIP4FM(x,kkper,kkstp,kkiter)
 #endif 
+
+#ifdef RIP_ET
+      write  (*, *)  'RIP_ET macro used'
+#endif
+
+#ifdef SWR_OUTER_1
+      write  (*, *)  'SWR_OUTER_1 macro used'
+#endif
+
+#ifdef SYNC_SWR_RIPET
+      write  (*, *)  'SYNC_SWR_RIPET macro used.'
+#endif
 
      
       INUNIT = 99
