@@ -518,7 +518,7 @@
 !
 !6----Set head for cell.
 !
-#       if defined SWR_OUTER_1 && SYNC_SWR_RIPET
+#       if defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
         HH=HNEW(IC,IR,IL)
         !HH = DBLE(HOLD(IC,IR,IL))
 
@@ -607,7 +607,7 @@
 !
               IF(HH > HK(KS) .and. HH <= HK(KS+1)) Then
               
-#             if defined SWR_OUTER_1 && SYNC_SWR_RIPET
+#             if defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
 
               IF (IUNIT(64).GT.0) THEN
                   IF (is_reach) THEN
