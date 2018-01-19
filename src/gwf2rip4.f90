@@ -1,3 +1,7 @@
+#if defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+#define GWF2RIP4FM(x) GWF2RIP4FM(x,kkper,kkstp,kkiter)
+#endif 
+
       Module GWFRIPMODULE
         Integer, Save, Pointer :: MAXRIP,IRIPCB,IRIPCB1,NRIPCL
         Integer, Save, Pointer :: MAXPOLY,MAXTS,MXSEG
@@ -461,9 +465,21 @@
 !
 !     Specifications:
 !     *************************************************************************
-      Use GLOBAL,       Only:NCOL,NROW,NLAY,DELR,DELC,IBOUND,HNEW,RHS,HCOF
+      Use GLOBAL,       Only:NCOL,NROW,NLAY,DELR,DELC,IBOUND,HNEW,RHS,HCOF,   &
+                             IUNIT
       USE GWFRIPMODULE, Only:MAXTS,MXSEG,NRIPCL,Sxd,Ard,Rmax,Rsxd,fdH,fdR,    &
                              NuSeg,CLoc,NPoly,HSurf,CovPFSG,C1,C2
+
+#     if defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+      USE GWFSWRMODULE, ONLY:REACH,NREACHES,DMINDPTH,DZERO
+
+      Integer::rch_cnt,IRCH,JRCH,LRCH
+      Double Precision::reach_depth
+      Logical::is_reach,depth_greater
+      Integer,INTENT(IN)::kkper,kkstp,kkiter
+
+#     endif
+
       Integer::IGRID                
       Integer::IL,IR,IC 
       Integer::LC,LP,KS,NTS 
@@ -502,7 +518,42 @@
 !
 !6----Set head for cell.
 !
+#       if defined SWR_OUTER_1 && SYNC_SWR_RIPET
         HH=HNEW(IC,IR,IL)
+        !HH = DBLE(HOLD(IC,IR,IL))
+
+        IF (IUNIT(64).GT.0) THEN
+            is_reach=.FALSE.
+            depth_greater=.FALSE.
+            reach_depth=DZERO
+            IF (kkiter.GT.1) THEN
+                Rch_Loop: DO rch_cnt = 1,NREACHES
+                    IRCH = REACH(rch_cnt)%IRCH
+                    JRCH = REACH(rch_cnt)%JRCH
+                    !LRCH = REACH(rch_cnt)%LAYSTR
+                    IF (IRCH.EQ.IR .AND. JRCH.EQ.IC) THEN
+                        is_reach=.TRUE.
+                        reach_depth = REACH(rch_cnt)%STAGE &
+                                      - REACH(rch_cnt)%GBELEV 
+                        depth_greater = reach_depth.GT.(DMINDPTH*10.0)
+                        IRIP=0
+                        INQUIRE(UNIT=166,OPENED=IRIP)
+                        IF (IRIP .AND. kkiter.LE.5) THEN
+                        write(166,100) kkper,kkstp,kkiter,rch_cnt,IR,IC,IL,   &
+                                     &reach_depth,depth_greater 
+                        END IF
+                        EXIT Rch_Loop
+                    END IF
+                END DO Rch_Loop
+            END IF
+
+
+00100   FORMAT(7(I10,1X),F10.2,1X,L18)
+        END IF
+#       else
+        HH=HNEW(IC,IR,IL)
+#       endif
+
 !
 !7----Process each polygon in a cell
 !
@@ -540,7 +591,7 @@
             Else if(HH <= Hxd) then
               C1(LC,LP,NTS)=0.0
               C2(LC,LP,NTS)=0.0
-              cycle TS_Loop                             
+              cycle TS_Loop
             End if
 !
 !12---Loop through the ET canopy flux rate function vertices.
@@ -555,6 +606,36 @@
 !14----Check to see if HK(KS)<HH<=HK(KS+1)
 !
               IF(HH > HK(KS) .and. HH <= HK(KS+1)) Then
+              
+#             if defined SWR_OUTER_1 && SYNC_SWR_RIPET
+
+              IF (IUNIT(64).GT.0) THEN
+                  IF (is_reach) THEN
+                      IF (depth_greater) THEN
+                          C1(LC,LP,NTS) = 0.0
+                          C2(LC,LP,NTS) = 0.0
+                      ELSE
+                          C1(LC,LP,NTS)=-fCov*HCOFtrm(HK(KS),HK(KS+1),    &
+                             RK(KS),RK(KS+1))* DELR(IC)*DELC(IR)
+                          C2(LC,LP,NTS)=-fCov*RHStrm(HK(KS),HK(KS+1),     &
+                             RK(KS),RK(KS+1))*DELR(IC)*DELC(IR)
+                      END IF
+                  
+                  ELSE
+                      C1(LC,LP,NTS)=-fCov*HCOFtrm(HK(KS),HK(KS+1),    &
+                             RK(KS),RK(KS+1))* DELR(IC)*DELC(IR)
+                      C2(LC,LP,NTS)=-fCov*RHStrm(HK(KS),HK(KS+1),     &
+                             RK(KS),RK(KS+1))*DELR(IC)*DELC(IR)
+                  END IF
+              
+              ELSE
+                C1(LC,LP,NTS)=-fCov*HCOFtrm(HK(KS),HK(KS+1),    &
+                             RK(KS),RK(KS+1))* DELR(IC)*DELC(IR)
+                C2(LC,LP,NTS)=-fCov*RHStrm(HK(KS),HK(KS+1),     &
+                             RK(KS),RK(KS+1))*DELR(IC)*DELC(IR)
+              END IF
+
+#             else
 !
 !15----When it is,  calculate C1 and C2 using the functions HCOFtrm and 
 !      RHStrm that are adjusted with fCov, DELR, and DELC.
@@ -563,6 +644,7 @@
                              RK(KS),RK(KS+1))* DELR(IC)*DELC(IR)
                 C2(LC,LP,NTS)=-fCov*RHStrm(HK(KS),HK(KS+1),     &
                              RK(KS),RK(KS+1))*DELR(IC)*DELC(IR)
+#              endif
 !
 !16----Add C1 to HCOF and subtract C2 from RHS.
 !
@@ -577,8 +659,8 @@
 !
 !17-----Return
 !
-    Return                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-! 
+    Return
+!
  End Subroutine GWF2RIP4FM
 !
 !     *************************************************************************

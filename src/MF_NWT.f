@@ -6,11 +6,19 @@ C     ******************************************************************
 C
 C        SPECIFICATIONS:
 C     ------------------------------------------------------------------
-!     GYANZ 01/12/2018
+!     GYANZ 01/19/2018
 !     SWR_OUTER_1: Macro when defined computes SWR only at the first
 !                  MODFLOW outer iteration. 
 !                  Example usage in pymake: fflags = 'fpp DSWR_OUTER_1'
 !     RIP_ET: Macro when defined includes RIP ET Package
+!     SYNC_SWR_RIPET: Macro when defined along with SWR_OUTER_1 coordinates
+!                     RIP ET computation based on SWR Reach depth. If the reach
+!                     depth is greater than 10*DMINDPTH, RIP ET is not computed
+!                     for that reach or cell. This check occurs only after 2nd
+!                     MODFLOW outer iteration or kiter. Furthermore, FID = 166
+!                     is assigned to output file for some RIP ET/SWR results.
+!                     This output file may be inputted in NAME file
+!                     using DATA package.                  
 C     ------------------------------------------------------------------
 C1------USE package modules.
       USE GLOBAL
@@ -69,6 +77,23 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
 #ifdef __GFORTRAN__
       write  (*, *)  'Compiled with gfortran, verion:', __VERSION__
 #endif   
+
+#if defined RIP_ET && defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+#define GWF2RIP4FM(x) GWF2RIP4FM(x,kkper,kkstp,kkiter)
+#endif 
+
+#ifdef RIP_ET
+      write  (*, *)  'RIP_ET macro used'
+#endif
+
+#ifdef SWR_OUTER_1
+      write  (*, *)  'SWR_OUTER_1 macro used'
+#endif
+
+#ifdef SYNC_SWR_RIPET
+      write  (*, *)  'SYNC_SWR_RIPET macro used.'
+#endif
+
      
       INUNIT = 99
       NCVGERR=0
@@ -118,7 +143,21 @@ C6------ALLOCATE AND READ (AR) PROCEDURE
       IF(IUNIT(5).GT.0) CALL GWF2EVT7AR(IUNIT(5),IGRID)
 #     ifdef RIP_ET
       !GYANZ 01/12/2018
-          IF(IUNIT(6).GT.0) CALL GWF2RIP4AR(IUNIT(6),IGRID)               !inserted by jdh    
+          IF(IUNIT(6).GT.0) THEN
+              CALL GWF2RIP4AR(IUNIT(6),IGRID)               !inserted by jdh    
+#     if defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
+              !Temporary solution to output RIP ET - REACH output to
+              !fid=166 as defined in the name file
+              INQUIRE(UNIT=166,OPENED=IRIP)
+              IF (IRIP) THEN
+                 write(166,2000)
+              END IF
+02000   FORMAT('      KPER',1X,'      KSTP',1X,'     KITER',1X,
+     &         '  REACH-NO','       ROW',1X,'       COL',1X,
+     &         '     LAYER',1X,'     DEPTH',1X,'   DPTH>10xMINDPTH')
+#      endif
+          END IF
+
 #     endif
       IF(IUNIT(7).GT.0) CALL GWF2GHB7AR(IUNIT(7),IGRID)
       IF(IUNIT(8).GT.0) CALL GWF2RCH7AR(IUNIT(8),IGRID)
