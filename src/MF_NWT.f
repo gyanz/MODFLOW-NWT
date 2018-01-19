@@ -134,7 +134,7 @@ C6------ALLOCATE AND READ (AR) PROCEDURE
               END IF
 02000   FORMAT('      KPER',1X,'      KSTP',1X,'     KITER',1X,
      &         '  REACH-NO','       ROW',1X,'       COL',1X,
-     &         '     LAYER',1X,'     DEPTH',1X,'   DPTH>MINDPTH')
+     &         '     LAYER',1X,'     DEPTH',1X,'   DPTH>10xMINDPTH')
 #      endif
           END IF
 

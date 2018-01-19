@@ -524,6 +524,7 @@
 
         IF (IUNIT(64).GT.0) THEN
             is_reach=.FALSE.
+            depth_greater=.FALSE.
             reach_depth=DZERO
             IF (kkiter.GT.1) THEN
                 Rch_Loop: DO rch_cnt = 1,NREACHES
@@ -534,7 +535,7 @@
                         is_reach=.TRUE.
                         reach_depth = REACH(rch_cnt)%STAGE &
                                       - REACH(rch_cnt)%GBELEV 
-                        depth_greater = reach_depth.GT.DMINDPTH
+                        depth_greater = reach_depth.GT.(DMINDPTH*10.0)
                         IRIP=0
                         INQUIRE(UNIT=166,OPENED=IRIP)
                         IF (IRIP .AND. kkiter.LE.5) THEN
@@ -547,7 +548,7 @@
             END IF
 
 
-00100   FORMAT(7(I10,1X),F10.2,1X,L15)
+00100   FORMAT(7(I10,1X),F10.2,1X,L18)
         END IF
 #       else
         HH=HNEW(IC,IR,IL)
@@ -610,7 +611,7 @@
 
               IF (IUNIT(64).GT.0) THEN
                   IF (is_reach) THEN
-                      IF (reach_depth.GT.DMINDPTH) THEN
+                      IF (depth_greater) THEN
                           C1(LC,LP,NTS) = 0.0
                           C2(LC,LP,NTS) = 0.0
                       ELSE
