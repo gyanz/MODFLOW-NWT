@@ -49,7 +49,7 @@ C
       INTEGER IBDT(8)
 C
       CHARACTER*4 CUNIT(NIUNIT)
-      DATA CUNIT/'BCF6', 'WEL ', 'DRN ', 'RIV ', 'EVT ', 'RIP ', 'GHB ',  !  7
+      DATA CUNIT/'BCF6', 'WEL ', 'DRN ', 'RIV ', 'EVT ', 'gfd ', 'GHB ',  !  7
      &           'RCH ', 'SIP ', 'DE4 ', '    ', 'OC  ', 'PCG ', 'lmg ',  ! 14
      &           'gwt ', 'FHB ', 'RES ', 'STR ', 'IBS ', 'CHD ', 'HFB6',  ! 21
      &           'LAK ', 'LPF ', 'DIS ', '    ', 'PVAL', '    ', 'HOB ',  ! 28
@@ -58,8 +58,9 @@ C
      &           'HYD ', 'SFR ', '    ', 'GAGE', 'LVDA', '    ', 'LMT6',  ! 49
      &           'MNW2', 'MNWI', 'MNW1', 'KDEP', 'SUB ', 'UZF ', 'gwm ',  ! 56
      &           'SWT ', 'cfp ', 'pcgn', '    ', 'fmp ', 'UPW ', 'NWT ',  ! 63
-     &           'SWR ', 'SWI2', '    ', '    ', '    ', '    ', '    ',  ! 70     - SWR - JDH 
-     &           30*'    '/                                               ! 71-100 - SWR - JDH
+     &           'SWR ', 'SWI2', '    ', '    ', '    ', '    ', '    ',  ! 70
+     &           'RIP',                                                   ! 71
+     &           29*'    '/                                               ! 72-100
 C     ------------------------------------------------------------------
 C
 C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
@@ -143,8 +144,8 @@ C6------ALLOCATE AND READ (AR) PROCEDURE
       IF(IUNIT(5).GT.0) CALL GWF2EVT7AR(IUNIT(5),IGRID)
 #     ifdef RIP_ET
       !GYANZ 01/12/2018
-          IF(IUNIT(6).GT.0) THEN
-              CALL GWF2RIP4AR(IUNIT(6),IGRID)               !inserted by jdh    
+          IF(IUNIT(71).GT.0) THEN
+              CALL GWF2RIP4AR(IUNIT(71),IGRID)               !inserted    
 #     if defined SWR_OUTER_1 && defined SYNC_SWR_RIPET
               !Temporary solution to output RIP ET - REACH output to
               !fid=166 as defined in the name file
@@ -248,7 +249,7 @@ C----------READ USING PACKAGE READ AND PREPARE MODULES.
         IF(IUNIT(5).GT.0) CALL GWF2EVT7RP(IUNIT(5),IGRID)
 #       ifdef RIP_ET
         !GYANZ 01/12/2018
-            IF(IUNIT(6).GT.0) CALL GWF2RIP4RP(IUNIT(6),IGRID)    !inserted by jdh
+            IF(IUNIT(71).GT.0) CALL GWF2RIP4RP(IUNIT(71),IGRID)    !inserted
 #       endif
         IF(IUNIT(7).GT.0) CALL GWF2GHB7RP(IUNIT(7),IGRID)
 !        IF(IUNIT(8).GT.0) CALL GWF2RCH7RP(IUNIT(8),IUNIT(44),IGRID)
@@ -376,7 +377,7 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
             
 #           ifdef RIP_ET
             !GYANZ 01/12/2018
-                IF(IUNIT(6).GT.0) CALL GWF2RIP4FM(IGRID)                !inserted by jdh
+                IF(IUNIT(71).GT.0) CALL GWF2RIP4FM(IGRID)                !inserted
 #           endif
  
             IF(IUNIT(7).GT.0) CALL GWF2GHB7FM(IGRID)
@@ -585,7 +586,7 @@ C7C4----CALCULATE BUDGET TERMS. SAVE CELL-BY-CELL FLOW TERMS.
           
 #         ifdef RIP_ET
           !GYANZ 01/12/2018
-              IF(IUNIT(6).GT.0) CALL GWF2RIP4BD(KKSTP,KKPER,IGRID)        !inserted by jdh
+              IF(IUNIT(71).GT.0) CALL GWF2RIP4BD(KKSTP,KKPER,IGRID)        !inserted
 #         endif
           
           IF(IUNIT(7).GT.0) CALL GWF2GHB7BD(KKSTP,KKPER,IGRID)
@@ -723,7 +724,7 @@ C9------LAST BECAUSE IT DEALLOCATES IUNIT.
       IF(IUNIT(5).GT.0) CALL GWF2EVT7DA(IGRID)
 #     ifdef RIP_ET
       !GYANZ 01/12/2018
-      IF(IUNIT(6).GT.0) CALL GWF2RIP4DA(IGRID)                        !inserted by jdh
+      IF(IUNIT(71).GT.0) CALL GWF2RIP4DA(IGRID)                        !inserted
 #     endif
       IF(IUNIT(7).GT.0) CALL GWF2GHB7DA(IGRID)
       IF(IUNIT(8).GT.0) CALL GWF2RCH7DA(IGRID)
